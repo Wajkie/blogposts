@@ -7,7 +7,7 @@ slug: "design-system-overhaul-blog-feature"
 
 # Design System Overhaul & Blog Feature
 
-Idag har vi gjort två stora saker: byggt ett komplett liquid glass design system och implementerat en fullständig blogg-feature med GitHub som backend.
+Idag implementerades 2 stora saker: byggt ett komplett liquid glass design system och implementerat en fullständig blogg-feature med GitHub som backend.
 
 ## 🎨 Design System - Liquid Glass & Accessibility
 
