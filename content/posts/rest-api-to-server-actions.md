@@ -24,7 +24,7 @@ They worked fine, but there was friction:
 
 ## Enter Server Actions
 
-Next.js 15+ introduced **Server Actions** - functions marked with `'use server'` that run on the server but can be called directly from client components.
+Next.js 13.4 introduced **Server Actions** as an experimental feature; they stabilized in Next.js 14. They're functions marked with `'use server'` that run on the server but can be called directly from client components.
 
 ### Before (API Route)
 
@@ -88,8 +88,34 @@ No more manual type assertions. TypeScript knows exactly what `createPost` accep
 ### 2. No Manual Serialization
 Forget `JSON.stringify()` and `response.json()`. Arguments and return values are automatically serialized.
 
-### 3. Error Handling Bubbles Up
-Throw errors in server actions, catch them with try/catch on the client. No status codes, no manual error objects.
+### 3. Error Handling
+This is where Server Actions differ from what you might expect. **Throwing an unhandled error in a Server Action triggers the nearest error boundary** — it does not propagate to a `try/catch` in the calling client component.
+
+For graceful error handling, return typed result objects instead:
+
+```typescript
+// Return a typed result — don't rely on thrown errors for control flow
+export async function createPost(formData: PostFormData) {
+  try {
+    const post = await db.insertInto('posts').values(formData).execute();
+    return { success: true as const, post };
+  } catch {
+    return { success: false as const, error: 'Failed to create post' };
+  }
+}
+
+// Client component
+const result = await createPost(formData);
+if (!result.success) {
+  setError(result.error);
+}
+```
+
+For form-based actions, `useActionState` is the idiomatic pattern:
+
+```typescript
+const [state, action] = useActionState(createPost, { error: null });
+```
 
 ### 4. Direct Database Access
 Server actions run on the server, so you can import `db` directly. No need for API layers.
@@ -140,10 +166,10 @@ Each file exports focused, single-purpose functions.
 
 ## Performance Impact
 
-**Before**: Client → API Route → Database (2 network calls)
-**After**: Client → Server Action → Database (1 call, co-located)
+**Before**: Client → API Route → Database (2 hops when called from SSR within the same app)
+**After**: Client → Server Action → Database (co-located, no internal HTTP round-trip)
 
-Server actions are **faster** because they skip the HTTP overhead between Next.js and itself.
+Server actions eliminate the loopback HTTP overhead when Next.js was calling its own API routes during server-side rendering. From the browser, there's still one network request either way — the gain is on the server side.
 
 ## Conclusion
 
